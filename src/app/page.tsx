@@ -19,6 +19,21 @@ const newArrivals = [
   { name: "Phulkari Kurti", price: "£45", color: "#5A6B4E" },
 ];
 
+const preLovedAssurances = [
+  {
+    title: "Authenticated",
+    body: "Every pre-loved piece is verified for craftsmanship and origin before it reaches you.",
+  },
+  {
+    title: "Restored with Care",
+    body: "Professionally cleaned, repaired, and freshened so it feels as cherished as new.",
+  },
+  {
+    title: "Kinder Choice",
+    body: "Extending the life of beautiful textiles — gentler on the planet and your wallet.",
+  },
+];
+
 const testimonials = [
   {
     quote:
@@ -46,27 +61,27 @@ export default function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-dark-section relative min-h-[90vh] flex items-center overflow-hidden">
+      <section className="bg-dark-section relative flex items-center overflow-hidden">
         {/* Decorative background pattern */}
         <div
-          className="absolute inset-0 opacity-15"
+          className="absolute inset-0 opacity-10"
           style={{
             backgroundImage: `radial-gradient(circle at 25% 50%, #C8A86A 0%, transparent 55%), radial-gradient(circle at 80% 30%, #C8A86A 0%, transparent 40%)`,
           }}
         />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAxOGMwLTkuOTQtOC4wNi0xOC0xOC0xOCIgc3Ryb2tlPSIjQzhBODZBIiBzdHJva2Utd2lkdGg9IjAuNSIgb3BhY2l0eT0iMC4zIi8+PC9nPjwvc3ZnPg==')] opacity-20" />
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           <div>
-            <span className="inline-block font-sans text-xs tracking-[0.3em] uppercase text-[#C8A86A] mb-6">
+            <span className="inline-block font-sans text-xs tracking-[0.3em] uppercase text-[#C8A86A] mb-4">
               New Collection {currentYear}
             </span>
-            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl text-[#F7F3EB] leading-tight mb-6">
+            <h1 className="font-display text-4xl sm:text-5xl text-[#F7F3EB] leading-tight mb-4">
               Where Tradition
               <br />
               <span className="text-[#C8A86A] italic">Meets Grace</span>
             </h1>
-            <p className="font-sans text-base text-[#A79C89] leading-relaxed mb-10 max-w-md">
+            <p className="font-sans text-sm text-[#A79C89] leading-relaxed mb-8 max-w-md">
               Discover handcrafted Indian ethnic wear — each piece woven with
               centuries of artistry, designed for the woman who walks between
               worlds.
@@ -74,13 +89,13 @@ export default function Home() {
             <div className="flex flex-wrap gap-4">
               <Link
                 href="/collections"
-                className="bg-[#C8A86A] text-[#3B0F14] font-sans text-xs tracking-widest uppercase px-8 py-4 hover:bg-[#F7F3EB] transition-colors duration-300"
+                className="bg-[#C8A86A] text-[#3B0F14] font-sans text-xs tracking-widest uppercase px-7 py-3.5 hover:bg-[#F7F3EB] transition-colors duration-300"
               >
                 Explore Collection
               </Link>
               <Link
                 href="/about"
-                className="border border-[#C8A86A]/50 text-[#F7F3EB] font-sans text-xs tracking-widest uppercase px-8 py-4 hover:border-[#C8A86A] transition-colors duration-300"
+                className="border border-[#C8A86A]/50 text-[#F7F3EB] font-sans text-xs tracking-widest uppercase px-7 py-3.5 hover:border-[#C8A86A] transition-colors duration-300"
               >
                 Our Story
               </Link>
@@ -91,27 +106,138 @@ export default function Home() {
           <div className="flex justify-center lg:justify-end">
             <div className="relative">
               {/* Outer decorative ring */}
-              <div className="w-72 h-72 sm:w-96 sm:h-96 rounded-full border border-[#C8A86A]/40 flex items-center justify-center">
+              <div className="w-52 h-52 sm:w-64 sm:h-64 rounded-full border border-[#C8A86A]/40 flex items-center justify-center">
                 {/* Mid ring */}
-                <div className="w-64 h-64 sm:w-[22rem] sm:h-[22rem] rounded-full border border-[#C8A86A]/25 flex items-center justify-center">
+                <div className="w-44 h-44 sm:w-56 sm:h-56 rounded-full border border-[#C8A86A]/25 flex items-center justify-center">
                   {/* Ivory disc — gives the dark monogram a contrasting ground */}
-                  <div className="w-52 h-52 sm:w-72 sm:h-72 rounded-full bg-[#F7F3EB] flex items-center justify-center shadow-2xl">
+                  <div className="w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-[#F7F3EB] flex items-center justify-center shadow-2xl">
                     <Image
                       src="/Monogram.png"
                       alt="Ethnique Monogram"
                       width={220}
                       height={220}
-                      className="w-44 h-44 sm:w-60 sm:h-60 object-contain"
+                      className="w-28 h-28 sm:w-36 sm:h-36 object-contain"
                     />
                   </div>
                 </div>
               </div>
               {/* Floating badge */}
-              <div className="absolute -bottom-4 -right-4 bg-[#C8A86A] text-[#3B0F14] font-sans text-xs tracking-wider uppercase px-4 py-2">
+              <div className="absolute -bottom-3 -right-3 bg-[#C8A86A] text-[#3B0F14] font-sans text-[10px] tracking-wider uppercase px-3 py-1.5">
                 Est. 2026
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* New & Pre-Loved */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center max-w-2xl mx-auto mb-12">
+          <span className="font-sans text-xs tracking-[0.3em] uppercase text-[#C8A86A]">
+            New &amp; Pre-Loved
+          </span>
+          <h2 className="font-display text-4xl sm:text-5xl text-[#3B0F14] mt-2 mb-4">
+            Two Ways to Adapt Tradition
+          </h2>
+          <p className="font-sans text-sm text-[#A79C89] leading-relaxed">
+            At Ethnique, beautiful clothing is meant to be worn and loved — again
+            and again. Choose freshly crafted pieces straight from our artisans,
+            or give a loved heirloom a second life with our authenticated
+            pre-loved edit.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+          {/* Brand New — warm saffron-gold */}
+          <div className="group relative flex flex-col bg-card-fresh p-8 sm:p-10 overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#C8A86A]" />
+            <div className="absolute -bottom-16 -left-16 w-48 h-48 rounded-full border border-[#C8A86A]/25 opacity-60" />
+            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#C8A86A]/10" />
+            <span className="relative font-sans text-[10px] tracking-[0.25em] uppercase text-[#9A7B4F] mb-5">
+              Brand New
+            </span>
+            <h3 className="relative font-display text-2xl sm:text-3xl text-[#2C2418] mb-3">
+              Freshly Crafted
+            </h3>
+            <p className="relative font-sans text-sm text-[#6B5D4E] leading-relaxed mb-6">
+              Handwoven by master karigars and finished to last a lifetime. Be
+              the first to wear a piece made with intention, today.
+            </p>
+            <ul className="relative space-y-2.5 mb-8">
+              {[
+                "Direct from artisan looms across India",
+                "Made-to-measure options available",
+                "First-owner freshness, ready to gift",
+              ].map((point) => (
+                <li
+                  key={point}
+                  className="flex items-start gap-3 font-sans text-sm text-[#2C2418]"
+                >
+                  <span className="text-[#B8860B] mt-0.5">✦</span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/collections"
+              className="relative mt-auto self-start bg-[#2A5548] text-[#F7F3EB] font-sans text-xs tracking-widest uppercase px-7 py-3.5 hover:bg-[#1F4037] transition-colors duration-300"
+            >
+              Shop New Arrivals
+            </Link>
+          </div>
+
+          {/* Pre-Loved — sage renewal green */}
+          <div className="group relative flex flex-col bg-card-recarnated p-8 sm:p-10 overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300">
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#C8A86A]" />
+            <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full border border-[#C8A86A]/30" />
+            <div className="absolute bottom-4 right-4 w-24 h-24 rounded-full border border-[#F7F3EB]/10" />
+            <span className="relative font-sans text-[10px] tracking-[0.25em] uppercase text-[#C8A86A] mb-5">
+              Pre-Loved
+            </span>
+            <h3 className="relative font-display text-2xl sm:text-3xl text-[#F7F3EB] mb-3">
+              Recarnated
+            </h3>
+            <p className="relative font-sans text-sm text-[#C8D4CA] leading-relaxed mb-6">
+              Exquisite pieces given a second life — authenticated, expertly
+              restored, and waiting to be loved all over again. Heritage that is
+              kinder to the planet and your budget.
+            </p>
+            <ul className="relative space-y-2.5 mb-8">
+              {[
+                "Authenticated & quality-checked by hand",
+                "Professionally cleaned & restored",
+                "Up to 60% off the original price",
+              ].map((point) => (
+                <li
+                  key={point}
+                  className="flex items-start gap-3 font-sans text-sm text-[#F7F3EB]"
+                >
+                  <span className="text-[#C8A86A] mt-0.5">✦</span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/collections"
+              className="relative mt-auto self-start bg-[#C8A86A] text-[#2C2418] font-sans text-xs tracking-widest uppercase px-7 py-3.5 hover:bg-[#F7F3EB] transition-colors duration-300"
+            >
+              Explore Pre-Loved
+            </Link>
+          </div>
+        </div>
+
+        {/* Assurances */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-12 pt-10 border-t border-[#C8A86A]/20">
+          {preLovedAssurances.map(({ title, body }) => (
+            <div key={title} className="text-center sm:text-left">
+              <h4 className="font-sans text-xs tracking-[0.2em] uppercase text-[#3B0F14] mb-2">
+                {title}
+              </h4>
+              <p className="font-sans text-sm text-[#A79C89] leading-relaxed">
+                {body}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 

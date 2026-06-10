@@ -62,14 +62,18 @@ export default function Footer() {
           <p className="font-sans text-xs text-[#A79C89]">
             © {new Date().getFullYear()} Ethnique. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            {["Privacy Policy", "Terms of Use"].map((item) => (
+          <div className="flex flex-wrap gap-6 justify-center sm:justify-end">
+            {[
+              { label: "Returns Policy", href: "/returns" },
+              { label: "Privacy Policy", href: "#" },
+              { label: "Terms of Use", href: "#" },
+            ].map(({ label, href }) => (
               <Link
-                key={item}
-                href="#"
+                key={label}
+                href={href}
                 className="font-sans text-xs text-[#A79C89] hover:text-[#C8A86A] transition-colors"
               >
-                {item}
+                {label}
               </Link>
             ))}
           </div>
