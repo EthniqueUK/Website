@@ -30,13 +30,19 @@ export default function Footer() {
               Explore
             </h3>
             <ul className="space-y-3">
-              {["Home", "About", "Collections", "Contact"].map((item) => (
-                <li key={item}>
+              {[
+                { label: "Home", href: "/" },
+                { label: "About", href: "/about" },
+                { label: "Collections", href: "/collections" },
+                { label: "Sell with Us", href: "/sell" },
+                { label: "Contact", href: "/contact" },
+              ].map(({ label, href }) => (
+                <li key={label}>
                   <Link
-                    href={item === "Home" ? "/" : `/${item.toLowerCase()}`}
+                    href={href}
                     className="font-sans text-sm text-[#A79C89] hover:text-[#F7F3EB] transition-colors"
                   >
-                    {item}
+                    {label}
                   </Link>
                 </li>
               ))}

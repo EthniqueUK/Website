@@ -24,13 +24,13 @@ export function AdminHeader({ staff }: AdminHeaderProps) {
   return (
     <header className="sticky top-0 z-40 overflow-hidden rounded-2xl border border-[#A79C89]/40 bg-white shadow-sm sm:static">
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
           <Image
-            src="/Logo.png"
+            src="/Monogram.png"
             alt="Ethnique"
-            width={100}
-            height={40}
-            className="h-10 w-auto shrink-0 object-contain sm:h-12"
+            width={80}
+            height={80}
+            className="h-16 w-16 shrink-0 object-contain sm:h-20 sm:w-20"
             priority
           />
           <div className="min-w-0">
