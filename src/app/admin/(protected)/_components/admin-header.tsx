@@ -6,31 +6,28 @@ import { usePathname } from "next/navigation";
 
 import { signOutAdmin } from "../actions";
 import type { StaffAuthState } from "@/lib/auth/admin";
-import { getNavItemsForStaff, roleLabel } from "@/lib/auth/permissions";
+import { roleLabel } from "@/lib/auth/permissions";
+
+import { AdminIcon } from "./admin-icons";
 
 type AdminHeaderProps = {
   staff: StaffAuthState;
 };
 
-function isNavActive(href: string, pathname: string, exact?: boolean) {
-  if (exact) return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
 export function AdminHeader({ staff }: AdminHeaderProps) {
   const pathname = usePathname();
-  const navItems = getNavItemsForStaff(staff);
+  const isDashboard = pathname === "/admin";
 
   return (
-    <header className="sticky top-0 z-40 overflow-hidden rounded-2xl border border-[#A79C89]/40 bg-white shadow-sm sm:static">
+    <header className="sticky top-0 z-40 rounded-2xl border border-[#A79C89]/40 bg-white shadow-sm sm:static">
       <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5 sm:py-4">
-        <div className="flex min-w-0 items-center gap-4 sm:gap-5">
+        <Link href="/admin" className="flex min-w-0 items-center gap-3 sm:gap-4">
           <Image
             src="/Monogram.png"
             alt="Ethnique"
             width={80}
             height={80}
-            className="h-16 w-16 shrink-0 object-contain sm:h-20 sm:w-20"
+            className="h-14 w-14 shrink-0 object-contain sm:h-16 sm:w-16"
             priority
           />
           <div className="min-w-0">
@@ -45,40 +42,29 @@ export function AdminHeader({ staff }: AdminHeaderProps) {
               {staff.marketCode ? ` · ${staff.marketCode.toUpperCase()}` : " · All markets"}
             </p>
           </div>
-        </div>
+        </Link>
 
-        <form action={signOutAdmin} className="shrink-0">
-          <button
-            type="submit"
-            className="rounded-xl bg-[#3B0F14] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#5C1520] sm:px-4 sm:text-sm"
-          >
-            Sign out
-          </button>
-        </form>
-      </div>
-
-      <nav
-        className="flex flex-nowrap gap-2 overflow-x-auto border-t border-[#A79C89]/20 px-4 py-3 [-ms-overflow-style:none] [scrollbar-width:none] sm:px-5 [&::-webkit-scrollbar]:hidden"
-        aria-label="Admin navigation"
-      >
-        {navItems.map((item) => {
-          const active = isNavActive(item.href, pathname, item.exact);
-
-          return (
+        <div className="flex shrink-0 items-center gap-2">
+          {!isDashboard ? (
             <Link
-              key={item.href}
-              href={item.href}
-              className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-medium transition sm:px-4 ${
-                active
-                  ? "bg-[#3B0F14] text-white shadow-sm"
-                  : "border border-[#A79C89]/40 bg-[#F7F3EB] text-[#3B0F14] hover:border-[#C8A86A]"
-              }`}
+              href="/admin"
+              className="inline-flex items-center gap-2 rounded-xl border border-[#A79C89]/40 bg-[#F7F3EB] px-3 py-2 text-xs font-semibold text-[#3B0F14] transition hover:border-[#C8A86A] sm:text-sm"
             >
-              {item.label}
+              <AdminIcon name="grid" className="h-4 w-4" />
+              <span className="hidden sm:inline">Dashboard</span>
             </Link>
-          );
-        })}
-      </nav>
+          ) : null}
+
+          <form action={signOutAdmin}>
+            <button
+              type="submit"
+              className="rounded-xl bg-[#3B0F14] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#5C1520] sm:px-4 sm:text-sm"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+      </div>
     </header>
   );
 }

@@ -86,30 +86,144 @@ export function roleLabel(role: StaffRole): string {
   }
 }
 
-export type NavItem = {
+/**
+ * Icon keys map to SVG components in
+ * `app/admin/(protected)/_components/admin-icons.tsx`.
+ * Kept as strings here so this module stays free of React/JSX.
+ */
+export type AdminNavIcon =
+  | "box"
+  | "tag"
+  | "cart"
+  | "bag"
+  | "users"
+  | "card"
+  | "calculator"
+  | "clipboard"
+  | "shield";
+
+export type AdminTab = {
   href: string;
   label: string;
-  exact?: boolean;
+  description: string;
+  icon: AdminNavIcon;
+  roles: StaffRole[];
 };
 
-export function getNavItemsForStaff(staff: { role: StaffRole }): NavItem[] {
-  const items: NavItem[] = [
-    { href: "/admin", label: "Overview", exact: true },
-  ];
+export type AdminGroup = {
+  key: string;
+  label: string;
+  description: string;
+  icon: AdminNavIcon;
+  accent: string;
+  tabs: AdminTab[];
+};
 
-  if (staff.role !== "manager") {
-    items.push({ href: "/admin/users", label: "Users" });
-  }
+const ADMIN_GROUPS: AdminGroup[] = [
+  {
+    key: "products",
+    label: "Products Management",
+    description: "Catalogue, listings and categories",
+    icon: "box",
+    accent: "#3B0F14",
+    tabs: [
+      {
+        href: "/admin/products",
+        label: "Products",
+        description: "Create, edit and publish products",
+        icon: "box",
+        roles: ["super_admin", "vendor", "manager"],
+      },
+      {
+        href: "/admin/categories",
+        label: "Categories",
+        description: "Organise the catalogue",
+        icon: "tag",
+        roles: ["super_admin", "vendor"],
+      },
+    ],
+  },
+  {
+    key: "orders",
+    label: "Orders Management",
+    description: "Orders, customers and checkout",
+    icon: "bag",
+    accent: "#7A2030",
+    tabs: [
+      {
+        href: "/admin/orders",
+        label: "Orders",
+        description: "View and fulfil orders",
+        icon: "cart",
+        roles: ["super_admin", "vendor"],
+      },
+      {
+        href: "/admin/customers",
+        label: "Customers",
+        description: "Customer records",
+        icon: "users",
+        roles: ["super_admin", "vendor"],
+      },
+      {
+        href: "/admin/checkout",
+        label: "Checkout",
+        description: "Checkout settings",
+        icon: "card",
+        roles: ["super_admin"],
+      },
+    ],
+  },
+  {
+    key: "pos",
+    label: "POS",
+    description: "Point of sale",
+    icon: "calculator",
+    accent: "#5C1520",
+    tabs: [
+      {
+        href: "/admin/pos",
+        label: "POS",
+        description: "In-person sales terminal",
+        icon: "calculator",
+        roles: ["super_admin", "vendor"],
+      },
+    ],
+  },
+  {
+    key: "users",
+    label: "Users Management",
+    description: "Staff, vendors and audit trail",
+    icon: "users",
+    accent: "#9A7B4F",
+    tabs: [
+      {
+        href: "/admin/users",
+        label: "Users",
+        description: "Manage staff accounts",
+        icon: "users",
+        roles: ["super_admin", "vendor"],
+      },
+      {
+        href: "/admin/vendors/approvals",
+        label: "Vendor Approvals",
+        description: "Review onboarding submissions",
+        icon: "shield",
+        roles: ["super_admin"],
+      },
+      {
+        href: "/admin/audit",
+        label: "Audit",
+        description: "Activity and audit log",
+        icon: "clipboard",
+        roles: ["super_admin", "vendor"],
+      },
+    ],
+  },
+];
 
-  if (staff.role === "super_admin") {
-    items.push({ href: "/admin/vendors/approvals", label: "Vendor Approvals" });
-  }
-
-  items.push({ href: "/admin/products", label: "Products" });
-
-  if (staff.role === "super_admin" || staff.role === "vendor") {
-    items.push({ href: "/admin/audit", label: "Audit" });
-  }
-
-  return items;
+export function getAdminGroupsForStaff(staff: { role: StaffRole }): AdminGroup[] {
+  return ADMIN_GROUPS.map((group) => ({
+    ...group,
+    tabs: group.tabs.filter((tab) => tab.roles.includes(staff.role)),
+  })).filter((group) => group.tabs.length > 0);
 }
