@@ -1,5 +1,13 @@
 import { Resend } from "resend";
 
+import {
+  brandEthnique,
+  buildEthniqueEmailHtml,
+  emailButton,
+  emailInfoBox,
+  emailMutedNote,
+  escapeHtml,
+} from "@/lib/email/email-layout";
 import { getAppUrl, getResendEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -90,35 +98,42 @@ export function vendorInviteEmailHtml(input: {
   const link = `${getAppUrl()}/admin/onboard/${input.token}`;
   const expires = input.expiresAt.toUTCString();
 
-  return `
-    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1F1F1F;">
-      <h1 style="color:#3B0F14;font-size:28px;">Welcome to Ethnique</h1>
-      <p>Hi ${escapeHtml(input.name)},</p>
-      <p>
-        You have been invited to join Ethnique as a Seller for the
+  return buildEthniqueEmailHtml({
+    title: "Welcome to Ethnique",
+    preheader: `Complete your seller onboarding for ${input.marketName}`,
+    bodyHtml: `
+      <p style="margin:0 0 16px;">Hi ${escapeHtml(input.name)},</p>
+      <p style="margin:0 0 16px;">
+        You have been invited to join ${brandEthnique()} as a Seller for the
         <strong>${escapeHtml(input.marketName)}</strong> market.
       </p>
-      <p>Please complete your onboarding form using the secure link below. This link expires on <strong>${expires}</strong> (7 calendar days).</p>
-      <p style="margin:28px 0;">
-        <a href="${link}" style="background:#3B0F14;color:#F7F3EB;padding:14px 22px;text-decoration:none;border-radius:8px;display:inline-block;">
-          Complete Seller Onboarding
-        </a>
+      <p style="margin:0 0 16px;">
+        Please complete your onboarding form using the secure link below. This link expires on
+        <strong>${escapeHtml(expires)}</strong> (7 calendar days).
       </p>
-      <p style="font-size:13px;color:#6B5D4E;">If the button does not work, copy and paste this URL into your browser:<br>${link}</p>
-      <p style="color:#A79C89;font-size:12px;">— Ethnique Admin</p>
-    </div>
-  `;
+      ${emailButton(link, "Complete Seller Onboarding")}
+      ${emailMutedNote(
+        `If the button does not work, copy and paste this URL into your browser:<br /><a href="${link}" style="color:#3B0F14;word-break:break-all;">${escapeHtml(link)}</a>`,
+      )}
+    `,
+  });
 }
 
 export function vendorSubmittedSellerEmailHtml(input: { name: string }) {
-  return `
-    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1F1F1F;">
-      <h1 style="color:#3B0F14;font-size:24px;">Onboarding submitted</h1>
-      <p>Hi ${escapeHtml(input.name)},</p>
-      <p>Thank you — we have received your seller onboarding form. Our team will review your details and notify you once your account is approved.</p>
-      <p style="color:#A79C89;font-size:12px;">— Ethnique Admin</p>
-    </div>
-  `;
+  return buildEthniqueEmailHtml({
+    title: "Onboarding received",
+    preheader: "We have received your seller onboarding form",
+    bodyHtml: `
+      <p style="margin:0 0 16px;">Hi ${escapeHtml(input.name)},</p>
+      <p style="margin:0 0 16px;">
+        Thank you — we have received your seller onboarding form. Our team will review your
+        details and notify you once your account is approved.
+      </p>
+      ${emailInfoBox(
+        "You do not need to take any further action right now. We will email you when your application has been reviewed.",
+      )}
+    `,
+  });
 }
 
 export function vendorSubmittedAdminEmailHtml(input: {
@@ -127,17 +142,21 @@ export function vendorSubmittedAdminEmailHtml(input: {
   marketName: string;
 }) {
   const approvalsLink = `${getAppUrl()}/admin/vendors/approvals`;
-  return `
-    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1F1F1F;">
-      <h1 style="color:#3B0F14;font-size:24px;">Seller onboarding awaiting approval</h1>
-      <p><strong>${escapeHtml(input.name)}</strong> (${escapeHtml(input.email)}) has submitted onboarding for <strong>${escapeHtml(input.marketName)}</strong>.</p>
-      <p style="margin:28px 0;">
-        <a href="${approvalsLink}" style="background:#3B0F14;color:#F7F3EB;padding:14px 22px;text-decoration:none;border-radius:8px;display:inline-block;">
-          Review in Vendor Approvals
-        </a>
-      </p>
-    </div>
-  `;
+
+  return buildEthniqueEmailHtml({
+    title: "Seller awaiting approval",
+    preheader: `${input.name} submitted seller onboarding`,
+    signOff: "Ethnique Admin Portal",
+    bodyHtml: `
+      <p style="margin:0 0 16px;">A new seller onboarding submission requires your review.</p>
+      ${emailInfoBox(`
+        <strong style="color:#3B0F14;">${escapeHtml(input.name)}</strong><br />
+        ${escapeHtml(input.email)}<br />
+        Market: <strong>${escapeHtml(input.marketName)}</strong>
+      `)}
+      ${emailButton(approvalsLink, "Review in Vendor Requests")}
+    `,
+  });
 }
 
 export function vendorApprovedEmailHtml(input: {
@@ -151,38 +170,41 @@ export function vendorApprovedEmailHtml(input: {
     ? "Set your password & continue"
     : "Sign in to Admin Portal";
 
-  return `
-    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1F1F1F;">
-      <h1 style="color:#3B0F14;font-size:24px;">Welcome to Ethnique</h1>
-      <p>Hi ${escapeHtml(input.name)},</p>
-      <p>Your seller account for the <strong>${escapeHtml(input.marketName)}</strong> market has been approved.</p>
-      <p>Set your password using the button below, then sign in. You will be asked to set up authenticator MFA on first login.</p>
-      <p style="margin:28px 0;">
-        <a href="${actionLink}" style="background:#3B0F14;color:#F7F3EB;padding:14px 22px;text-decoration:none;border-radius:8px;display:inline-block;">
-          ${actionLabel}
-        </a>
+  return buildEthniqueEmailHtml({
+    title: "Your account is approved",
+    preheader: `Your Ethnique seller account for ${input.marketName} is ready`,
+    bodyHtml: `
+      <p style="margin:0 0 16px;">Hi ${escapeHtml(input.name)},</p>
+      <p style="margin:0 0 16px;">
+        Your seller account for the <strong>${escapeHtml(input.marketName)}</strong> market has been
+        approved.
       </p>
-      <p style="font-size:13px;color:#6B5D4E;">After setting your password, sign in at ${loginLink}</p>
-    </div>
-  `;
+      <p style="margin:0 0 16px;">
+        Set your password using the button below, then sign in. You will be asked to set up
+        authenticator MFA on first login.
+      </p>
+      ${emailButton(actionLink, actionLabel)}
+      ${emailMutedNote(
+        `After setting your password, sign in at <a href="${loginLink}" style="color:#3B0F14;">${escapeHtml(loginLink)}</a>`,
+      )}
+    `,
+  });
 }
 
 export function vendorRejectedEmailHtml(input: { name: string; reason: string }) {
-  return `
-    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1F1F1F;">
-      <h1 style="color:#3B0F14;font-size:24px;">Onboarding update</h1>
-      <p>Hi ${escapeHtml(input.name)},</p>
-      <p>Unfortunately we could not approve your seller onboarding at this time.</p>
-      <p><strong>Reason:</strong> ${escapeHtml(input.reason)}</p>
-      <p>If you have questions, reply to this email or contact hello@ethnique.co.uk.</p>
-    </div>
-  `;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
+  return buildEthniqueEmailHtml({
+    title: "Onboarding update",
+    preheader: "An update on your Ethnique seller application",
+    bodyHtml: `
+      <p style="margin:0 0 16px;">Hi ${escapeHtml(input.name)},</p>
+      <p style="margin:0 0 16px;">
+        Unfortunately we could not approve your seller onboarding at this time.
+      </p>
+      ${emailInfoBox(`<strong>Reason:</strong> ${escapeHtml(input.reason)}`)}
+      <p style="margin:16px 0 0;">
+        If you have questions, reply to this email or contact
+        <a href="mailto:hello@ethnique.co.uk" style="color:#3B0F14;">hello@ethnique.co.uk</a>.
+      </p>
+    `,
+  });
 }

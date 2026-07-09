@@ -11,6 +11,7 @@ export type AuditAction =
   | "vendor.invite"
   | "vendor.approve"
   | "vendor.reject"
+  | "vendor.delete_request"
   | "product.create"
   | "product.update"
   | "product.delete"

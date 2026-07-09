@@ -176,6 +176,10 @@ export async function getInviteByToken(
     return { error: "This invite link is invalid." };
   }
 
+  if (invite.status === "revoked") {
+    return { error: "This invite has been cancelled. Please contact Ethnique if you need assistance." };
+  }
+
   if (invite.status !== "pending") {
     return { error: "This invite link has already been used or revoked." };
   }
@@ -557,5 +561,103 @@ export async function rejectSellerSubmissionAction(submissionId: string, reason:
   });
 
   revalidatePath("/admin/vendors/approvals");
+  return { ok: true as const };
+}
+
+export async function deleteOnboardingRequestAction(inviteId: string) {
+  const staff = await assertMfaVerified();
+  if (staff.role !== "super_admin") {
+    throw new Error("Forbidden");
+  }
+
+  const admin = createAdminClient();
+
+  const { data: invite, error: inviteError } = await admin
+    .from("vendor_onboarding_invites")
+    .select("id, email, status, display_name, markets:market_id(name, code)")
+    .eq("id", inviteId)
+    .maybeSingle();
+
+  if (inviteError || !invite) {
+    throw new Error("Onboarding request not found.");
+  }
+
+  if (invite.status === "revoked") {
+    throw new Error("This request has already been deleted.");
+  }
+
+  const { data: submission } = await admin
+    .from("vendor_onboarding_submissions")
+    .select(
+      "id, status, documents:vendor_identity_documents(storage_path)",
+    )
+    .eq("invite_id", inviteId)
+    .maybeSingle();
+
+  if (submission && submission.status !== "submitted") {
+    throw new Error("Only open onboarding requests can be deleted.");
+  }
+
+  if (invite.status !== "pending" && !submission) {
+    throw new Error("This request cannot be deleted.");
+  }
+
+  if (submission) {
+    const documents = submission.documents ?? [];
+    const paths = documents
+      .map((doc) => doc.storage_path)
+      .filter((path): path is string => Boolean(path));
+
+    if (paths.length > 0) {
+      const { error: storageError } = await admin.storage
+        .from("vendor-identity-documents")
+        .remove(paths);
+
+      if (storageError) {
+        throw new Error(`Failed to remove uploaded documents: ${storageError.message}`);
+      }
+    }
+
+    const { error: deleteSubmissionError } = await admin
+      .from("vendor_onboarding_submissions")
+      .delete()
+      .eq("id", submission.id);
+
+    if (deleteSubmissionError) {
+      throw new Error(deleteSubmissionError.message);
+    }
+  }
+
+  const { error: revokeError } = await admin
+    .from("vendor_onboarding_invites")
+    .update({
+      status: "revoked",
+      revoked_at: new Date().toISOString(),
+      revoked_by: staff.userId,
+    })
+    .eq("id", inviteId);
+
+  if (revokeError) {
+    throw new Error(revokeError.message);
+  }
+
+  const market = Array.isArray(invite.markets) ? invite.markets[0] : invite.markets;
+
+  await logAdminAction({
+    actor: staff,
+    action: "vendor.delete_request",
+    entityType: "vendor_invite",
+    entityId: inviteId,
+    summary: `Deleted onboarding request for ${invite.email}`,
+    metadata: {
+      email: invite.email,
+      submissionId: submission?.id ?? null,
+      marketCode: market?.code ?? null,
+    },
+  });
+
+  revalidatePath("/admin/vendors/approvals");
+  revalidatePath("/admin/users");
+
   return { ok: true as const };
 }

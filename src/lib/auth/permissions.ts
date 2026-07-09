@@ -205,8 +205,8 @@ const ADMIN_GROUPS: AdminGroup[] = [
       },
       {
         href: "/admin/vendors/approvals",
-        label: "Vendor Approvals",
-        description: "Review onboarding submissions",
+        label: "Vendor Requests",
+        description: "Onboarding invites and approvals",
         icon: "shield",
         roles: ["super_admin"],
       },

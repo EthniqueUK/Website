@@ -8,11 +8,15 @@ import {
   rejectSellerSubmissionAction,
 } from "@/lib/actions/vendor-actions";
 
+import { DeleteRequestButton } from "./delete-request-button";
+
 type ApprovalActionsProps = {
   submissionId: string;
+  inviteId: string;
+  vendorName: string;
 };
 
-export function ApprovalActions({ submissionId }: ApprovalActionsProps) {
+export function ApprovalActions({ submissionId, inviteId, vendorName }: ApprovalActionsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -91,6 +95,12 @@ export function ApprovalActions({ submissionId }: ApprovalActionsProps) {
           </button>
         </div>
       ) : null}
+
+      <DeleteRequestButton
+        inviteId={inviteId}
+        vendorName={vendorName}
+        variant="submitted"
+      />
     </div>
   );
 }

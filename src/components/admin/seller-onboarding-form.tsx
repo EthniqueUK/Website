@@ -2,6 +2,7 @@
 
 import { FormEvent, useState, useTransition } from "react";
 
+import { FileUploadField } from "@/components/admin/file-upload-field";
 import { SignaturePad } from "@/components/admin/signature-pad";
 import { submitSellerOnboardingAction } from "@/lib/actions/vendor-actions";
 import {
@@ -253,16 +254,10 @@ export function SellerOnboardingForm({ token, invite }: SellerOnboardingFormProp
                 ))}
               </select>
             </label>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-[#1F1F1F]">Upload file</span>
-              <input
-                type="file"
-                name="identity_file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                required={!identityDeferred}
-                className="w-full rounded-xl border border-[#A79C89]/40 px-3 py-2.5 text-sm"
-              />
-            </label>
+            <FileUploadField
+              name="identity_file"
+              required={!identityDeferred}
+            />
           </div>
         ) : null}
       </section>
@@ -302,16 +297,10 @@ export function SellerOnboardingForm({ token, invite }: SellerOnboardingFormProp
                 ))}
               </select>
             </label>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-[#1F1F1F]">Upload file</span>
-              <input
-                type="file"
-                name="address_file"
-                accept="image/jpeg,image/png,image/webp,application/pdf"
-                required={!addressDeferred}
-                className="w-full rounded-xl border border-[#A79C89]/40 px-3 py-2.5 text-sm"
-              />
-            </label>
+            <FileUploadField
+              name="address_file"
+              required={!addressDeferred}
+            />
           </div>
         ) : null}
       </section>
