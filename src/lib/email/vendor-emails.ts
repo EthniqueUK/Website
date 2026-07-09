@@ -180,8 +180,8 @@ export function vendorApprovedEmailHtml(input: {
         approved.
       </p>
       <p style="margin:0 0 16px;">
-        Set your password using the button below, then sign in. You will be asked to set up
-        authenticator MFA on first login.
+        Set your password using the button below, then sign in to the Admin Portal.
+        Two-factor authentication is optional for seller accounts and can be enabled later from your profile.
       </p>
       ${emailButton(actionLink, actionLabel)}
       ${emailMutedNote(

@@ -33,6 +33,8 @@ Run each migration file **in order**:
 1. `20260703_ecommerce_foundation.sql`
 2. `20260703_admin_portal_schema.sql`
 3. `20260703_admin_rls_policies.sql`
+4. `20260708_vendor_onboarding_seller_fields.sql` (if not already applied)
+5. `20260709_vendor_optional_mfa.sql` — vendor 2FA optional; super admin only mandatory
 
 ## TableSchemas parity
 

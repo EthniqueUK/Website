@@ -166,9 +166,9 @@ security definer
 set search_path = public
 as $$
 begin
-  if new.role in ('super_admin', 'vendor') then
+  if new.role = 'super_admin' then
     new.totp_required := true;
-  elsif new.role = 'manager' then
+  elsif new.role in ('vendor', 'manager') then
     new.totp_required := coalesce(new.totp_required, false);
   else
     new.totp_required := false;

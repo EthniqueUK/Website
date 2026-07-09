@@ -7,7 +7,7 @@ export function isStaffRole(role: string | null | undefined): role is StaffRole 
 }
 
 export function requiresMandatoryMfa(role: StaffRole): boolean {
-  return role === "super_admin" || role === "vendor";
+  return role === "super_admin";
 }
 
 export function canManageUsers(role: StaffRole): boolean {

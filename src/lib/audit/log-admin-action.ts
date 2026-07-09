@@ -8,6 +8,7 @@ export type AuditAction =
   | "user.create"
   | "user.update"
   | "user.delete"
+  | "user.password_reset"
   | "vendor.invite"
   | "vendor.approve"
   | "vendor.reject"

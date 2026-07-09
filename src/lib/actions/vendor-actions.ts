@@ -446,7 +446,7 @@ export async function approveSellerSubmissionAction(submissionId: string) {
     state_region: submission.state_region,
     postal_code: submission.postal_code,
     country_code: submission.country_code,
-    totp_required: true,
+    totp_required: false,
     created_by: staff.userId,
     approved_by: staff.userId,
     approved_at: new Date().toISOString(),
