@@ -218,171 +218,226 @@ export async function getInviteByToken(
   };
 }
 
-type SubmitOnboardingInput = {
-  token: string;
-  displayName: string;
-  gender: string;
-  addressLine1: string;
-  addressLine2: string;
-  city: string;
-  stateRegion: string;
-  postalCode: string;
-  countryCode: string;
-  identityDeferred: boolean;
-  addressDeferred: boolean;
-  identityDocType: string | null;
-  addressDocType: string | null;
-  identityFile: File | null;
-  addressFile: File | null;
-  termsAccepted: boolean;
-  signatureDataUrl: string;
-};
+type SubmitOnboardingResult =
+  | { ok: true; submissionId: string; emailWarning?: string }
+  | { ok: false; error: string };
 
-export async function submitSellerOnboardingAction(input: SubmitOnboardingInput) {
-  const inviteResult = await getInviteByToken(input.token);
-  if ("error" in inviteResult) {
-    throw new Error(inviteResult.error);
+const MAX_PROOF_BYTES = 10 * 1024 * 1024;
+
+function formText(value: FormDataEntryValue | null) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function formBool(value: FormDataEntryValue | null) {
+  return value === "true" || value === "1";
+}
+
+function formFile(value: FormDataEntryValue | null): File | null {
+  if (value instanceof File && value.size > 0) {
+    return value;
   }
+  return null;
+}
 
-  const invite = inviteResult.invite;
-  const market = invite.markets;
-
-  if (!market) {
-    throw new Error("Invite market is missing.");
+function validateProofFile(file: File, label: string) {
+  if (file.size > MAX_PROOF_BYTES) {
+    throw new Error(`${label} must be 10 MB or smaller.`);
   }
+}
 
-  const displayName = input.displayName.trim();
-  if (!displayName) throw new Error("Name is required.");
-  if (!isGender(input.gender)) throw new Error("Invalid gender selection.");
-  if (!input.addressLine1.trim()) throw new Error("Address is required.");
-  if (!input.city.trim()) throw new Error("City is required.");
-  if (!input.postalCode.trim()) throw new Error("Postal code is required.");
-  if (!input.countryCode.trim()) throw new Error("Country is required.");
-  if (!input.termsAccepted) throw new Error("You must accept the Terms and Conditions.");
-  if (!input.signatureDataUrl.startsWith("data:image/")) {
-    throw new Error("A digital signature is required.");
-  }
-
-  if (!input.identityDeferred) {
-    if (!input.identityFile || input.identityFile.size === 0) {
-      throw new Error("Identity proof is required, or choose to send later.");
+export async function submitSellerOnboardingAction(
+  formData: FormData,
+): Promise<SubmitOnboardingResult> {
+  try {
+    const token = formText(formData.get("token"));
+    if (!token) {
+      return { ok: false, error: "Invalid onboarding link." };
     }
-    if (!IDENTITY_DOC_TYPES.some((doc) => doc.value === input.identityDocType)) {
-      throw new Error("Select a valid identity document type.");
+
+    const inviteResult = await getInviteByToken(token);
+    if ("error" in inviteResult) {
+      return { ok: false, error: inviteResult.error };
     }
-  }
 
-  if (!input.addressDeferred) {
-    if (!input.addressFile || input.addressFile.size === 0) {
-      throw new Error("Address proof is required, or choose to send later.");
+    const invite = inviteResult.invite;
+    const market = invite.markets;
+
+    if (!market) {
+      return { ok: false, error: "Invite market is missing." };
     }
-    if (!ADDRESS_DOC_TYPES.some((doc) => doc.value === input.addressDocType)) {
-      throw new Error("Select a valid address document type.");
+
+    const displayName = formText(formData.get("display_name"));
+    const gender = formText(formData.get("gender"));
+    const addressLine1 = formText(formData.get("address_line1"));
+    const addressLine2 = formText(formData.get("address_line2"));
+    const city = formText(formData.get("city"));
+    const stateRegion = formText(formData.get("state_region"));
+    const postalCode = formText(formData.get("postal_code"));
+    const countryCode = formText(formData.get("country_code")) || invite.markets?.country_code || "GB";
+    const identityDeferred = formBool(formData.get("identity_deferred"));
+    const addressDeferred = formBool(formData.get("address_deferred"));
+    const identityDocType = formText(formData.get("identity_doc_type")) || null;
+    const addressDocType = formText(formData.get("address_doc_type")) || null;
+    const identityFile = identityDeferred ? null : formFile(formData.get("identity_file"));
+    const addressFile = addressDeferred ? null : formFile(formData.get("address_file"));
+    const termsAccepted = formBool(formData.get("terms_accepted"));
+    const signatureDataUrl = formText(formData.get("signature_data_url"));
+
+    if (!displayName) return { ok: false, error: "Name is required." };
+    if (!isGender(gender)) return { ok: false, error: "Invalid gender selection." };
+    if (!addressLine1) return { ok: false, error: "Address is required." };
+    if (!city) return { ok: false, error: "City is required." };
+    if (!postalCode) return { ok: false, error: "Postal code is required." };
+    if (!countryCode) return { ok: false, error: "Country is required." };
+    if (!termsAccepted) {
+      return { ok: false, error: "You must accept the Terms and Conditions." };
     }
-  }
+    if (!signatureDataUrl.startsWith("data:image/")) {
+      return { ok: false, error: "A digital signature is required." };
+    }
 
-  const admin = createAdminClient();
+    if (!identityDeferred) {
+      if (!identityFile) {
+        return { ok: false, error: "Identity proof is required, or choose to send later." };
+      }
+      validateProofFile(identityFile, "Identity proof");
+      if (!IDENTITY_DOC_TYPES.some((doc) => doc.value === identityDocType)) {
+        return { ok: false, error: "Select a valid identity document type." };
+      }
+    }
 
-  const { data: submission, error: submissionError } = await admin
-    .from("vendor_onboarding_submissions")
-    .insert({
-      invite_id: invite.id,
-      legal_name: displayName,
-      display_name: displayName,
-      phone: invite.phone ?? "",
-      gender: input.gender,
-      address_line1: input.addressLine1.trim(),
-      address_line2: input.addressLine2.trim() || null,
-      city: input.city.trim(),
-      state_region: input.stateRegion.trim() || null,
-      postal_code: input.postalCode.trim(),
-      country_code: input.countryCode.trim().toUpperCase(),
-      status: "submitted",
-      terms_accepted_at: new Date().toISOString(),
-      signature_data_url: input.signatureDataUrl,
-      identity_proof_deferred: input.identityDeferred,
-      address_proof_deferred: input.addressDeferred,
-    })
-    .select("id")
-    .single();
+    if (!addressDeferred) {
+      if (!addressFile) {
+        return { ok: false, error: "Address proof is required, or choose to send later." };
+      }
+      validateProofFile(addressFile, "Address proof");
+      if (!ADDRESS_DOC_TYPES.some((doc) => doc.value === addressDocType)) {
+        return { ok: false, error: "Select a valid address document type." };
+      }
+    }
 
-  if (submissionError || !submission) {
-    throw new Error(submissionError?.message ?? "Failed to save onboarding submission.");
-  }
+    const admin = createAdminClient();
 
-  async function uploadProof(file: File, category: "identity" | "address", docType: string) {
-    const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
-    const path = `${submission!.id}/${category}-${Date.now()}.${extension}`;
+    const { data: submission, error: submissionError } = await admin
+      .from("vendor_onboarding_submissions")
+      .insert({
+        invite_id: invite.id,
+        legal_name: displayName,
+        display_name: displayName,
+        phone: invite.phone ?? "",
+        gender,
+        address_line1: addressLine1,
+        address_line2: addressLine2 || null,
+        city,
+        state_region: stateRegion || null,
+        postal_code: postalCode,
+        country_code: countryCode.toUpperCase(),
+        status: "submitted",
+        terms_accepted_at: new Date().toISOString(),
+        signature_data_url: signatureDataUrl,
+        identity_proof_deferred: identityDeferred,
+        address_proof_deferred: addressDeferred,
+      })
+      .select("id")
+      .single();
 
-    const bytes = Buffer.from(await file.arrayBuffer());
-    const { error: uploadError } = await admin.storage
-      .from("vendor-identity-documents")
-      .upload(path, bytes, {
-        contentType: file.type || "application/octet-stream",
-        upsert: false,
+    if (submissionError || !submission) {
+      return {
+        ok: false,
+        error: submissionError?.message ?? "Failed to save onboarding submission.",
+      };
+    }
+
+    async function uploadProof(file: File, category: "identity" | "address", docType: string) {
+      const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
+      const path = `${submission!.id}/${category}-${Date.now()}.${extension}`;
+
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const { error: uploadError } = await admin.storage
+        .from("vendor-identity-documents")
+        .upload(path, bytes, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Failed to upload ${category} proof: ${uploadError.message}`);
+      }
+
+      const { error: docError } = await admin.from("vendor_identity_documents").insert({
+        submission_id: submission!.id,
+        document_type: docType,
+        proof_category: category,
+        storage_path: path,
+        original_filename: file.name,
+        mime_type: file.type || null,
+        file_size_bytes: file.size,
       });
 
-    if (uploadError) {
-      throw new Error(`Failed to upload ${category} proof: ${uploadError.message}`);
+      if (docError) {
+        throw new Error(docError.message);
+      }
     }
 
-    const { error: docError } = await admin.from("vendor_identity_documents").insert({
-      submission_id: submission!.id,
-      document_type: docType,
-      proof_category: category,
-      storage_path: path,
-      original_filename: file.name,
-      mime_type: file.type || null,
-      file_size_bytes: file.size,
-    });
-
-    if (docError) {
-      throw new Error(docError.message);
+    if (!identityDeferred && identityFile && identityDocType) {
+      await uploadProof(identityFile, "identity", identityDocType);
     }
+
+    if (!addressDeferred && addressFile && addressDocType) {
+      await uploadProof(addressFile, "address", addressDocType);
+    }
+
+    await admin
+      .from("vendor_onboarding_invites")
+      .update({
+        status: "completed",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("id", invite.id);
+
+    let emailWarning: string | undefined;
+
+    try {
+      const notifyEmail = getResendEnv().ADMIN_NOTIFICATION_EMAIL;
+
+      await Promise.all([
+        sendResendEmail({
+          type: "vendor_onboarding_submitted_vendor",
+          to: invite.email,
+          subject: "We received your Ethnique seller onboarding",
+          html: vendorSubmittedSellerEmailHtml({ name: displayName }),
+          inviteId: invite.id,
+          submissionId: submission.id,
+        }),
+        sendResendEmail({
+          type: "vendor_onboarding_submitted_admin",
+          to: notifyEmail,
+          subject: `Seller onboarding submitted: ${displayName}`,
+          html: vendorSubmittedAdminEmailHtml({
+            name: displayName,
+            email: invite.email,
+            marketName: market.name,
+          }),
+          inviteId: invite.id,
+          submissionId: submission.id,
+        }),
+      ]);
+    } catch (emailError) {
+      console.error("Onboarding confirmation emails failed:", emailError);
+      emailWarning =
+        emailError instanceof Error
+          ? `Your form was saved, but confirmation emails could not be sent: ${emailError.message}`
+          : "Your form was saved, but confirmation emails could not be sent.";
+    }
+
+    return { ok: true, submissionId: submission.id, emailWarning };
+  } catch (error) {
+    console.error("Seller onboarding submission failed:", error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to submit onboarding form.",
+    };
   }
-
-  if (!input.identityDeferred && input.identityFile && input.identityDocType) {
-    await uploadProof(input.identityFile, "identity", input.identityDocType);
-  }
-
-  if (!input.addressDeferred && input.addressFile && input.addressDocType) {
-    await uploadProof(input.addressFile, "address", input.addressDocType);
-  }
-
-  await admin
-    .from("vendor_onboarding_invites")
-    .update({
-      status: "completed",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", invite.id);
-
-  const notifyEmail = getResendEnv().ADMIN_NOTIFICATION_EMAIL;
-
-  await Promise.all([
-    sendResendEmail({
-      type: "vendor_onboarding_submitted_vendor",
-      to: invite.email,
-      subject: "We received your Ethnique seller onboarding",
-      html: vendorSubmittedSellerEmailHtml({ name: displayName }),
-      inviteId: invite.id,
-      submissionId: submission.id,
-    }),
-    sendResendEmail({
-      type: "vendor_onboarding_submitted_admin",
-      to: notifyEmail,
-      subject: `Seller onboarding submitted: ${displayName}`,
-      html: vendorSubmittedAdminEmailHtml({
-        name: displayName,
-        email: invite.email,
-        marketName: market.name,
-      }),
-      inviteId: invite.id,
-      submissionId: submission.id,
-    }),
-  ]);
-
-  return { ok: true as const, submissionId: submission.id };
 }
 
 export async function approveSellerSubmissionAction(submissionId: string) {

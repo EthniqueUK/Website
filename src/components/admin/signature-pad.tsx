@@ -78,7 +78,7 @@ export function SignaturePad({ onChange }: SignaturePadProps) {
       onChange(null);
       return;
     }
-    onChange(canvas.toDataURL("image/png"));
+    onChange(canvas.toDataURL("image/jpeg", 0.85));
   }
 
   function clear() {

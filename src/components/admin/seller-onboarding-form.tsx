@@ -30,6 +30,7 @@ export function SellerOnboardingForm({ token, invite }: SellerOnboardingFormProp
   const [isPending, startTransition] = useTransition();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [successNote, setSuccessNote] = useState<string | null>(null);
   const [identityDeferred, setIdentityDeferred] = useState(false);
   const [addressDeferred, setAddressDeferred] = useState(false);
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
@@ -40,37 +41,33 @@ export function SellerOnboardingForm({ token, invite }: SellerOnboardingFormProp
     setErrorMessage(null);
 
     const form = event.currentTarget;
+
     const formData = new FormData(form);
+    formData.set("token", token);
+    formData.set("identity_deferred", identityDeferred ? "1" : "0");
+    formData.set("address_deferred", addressDeferred ? "1" : "0");
+    formData.set("terms_accepted", termsAccepted ? "1" : "0");
+    formData.set("signature_data_url", signatureDataUrl ?? "");
+    formData.set("country_code", invite.countryCode);
+
+    if (identityDeferred) {
+      formData.delete("identity_file");
+    }
+
+    if (addressDeferred) {
+      formData.delete("address_file");
+    }
 
     startTransition(async () => {
       try {
-        await submitSellerOnboardingAction({
-          token,
-          displayName: String(formData.get("display_name") ?? ""),
-          gender: String(formData.get("gender") ?? ""),
-          addressLine1: String(formData.get("address_line1") ?? ""),
-          addressLine2: String(formData.get("address_line2") ?? ""),
-          city: String(formData.get("city") ?? ""),
-          stateRegion: String(formData.get("state_region") ?? ""),
-          postalCode: String(formData.get("postal_code") ?? ""),
-          countryCode: String(formData.get("country_code") ?? invite.countryCode),
-          identityDeferred,
-          addressDeferred,
-          identityDocType: identityDeferred
-            ? null
-            : String(formData.get("identity_doc_type") ?? ""),
-          addressDocType: addressDeferred
-            ? null
-            : String(formData.get("address_doc_type") ?? ""),
-          identityFile: identityDeferred
-            ? null
-            : ((formData.get("identity_file") as File | null) ?? null),
-          addressFile: addressDeferred
-            ? null
-            : ((formData.get("address_file") as File | null) ?? null),
-          termsAccepted,
-          signatureDataUrl: signatureDataUrl ?? "",
-        });
+        const result = await submitSellerOnboardingAction(formData);
+
+        if (!result.ok) {
+          setErrorMessage(result.error);
+          return;
+        }
+
+        setSuccessNote(result.emailWarning ?? null);
         setSuccess(true);
       } catch (error) {
         setErrorMessage(
@@ -87,9 +84,14 @@ export function SellerOnboardingForm({ token, invite }: SellerOnboardingFormProp
           Thank you
         </h1>
         <p className="mt-3 text-sm text-[#2A5548]">
-          Your onboarding form has been submitted. You will receive a confirmation email shortly,
-          and Ethnique will review your application.
+          Your onboarding form has been submitted. Ethnique will review your application.
+          {successNote ? null : " You will receive a confirmation email shortly."}
         </p>
+        {successNote ? (
+          <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            {successNote}
+          </p>
+        ) : null}
       </div>
     );
   }
