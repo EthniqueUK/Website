@@ -78,7 +78,19 @@ export function SignaturePad({ onChange }: SignaturePadProps) {
       onChange(null);
       return;
     }
-    onChange(canvas.toDataURL("image/jpeg", 0.85));
+    // White background + JPEG keeps signatures small enough for production JSON payloads.
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = Math.min(canvas.width, 900);
+    exportCanvas.height = Math.min(canvas.height, 360);
+    const exportContext = exportCanvas.getContext("2d");
+    if (!exportContext) {
+      onChange(canvas.toDataURL("image/jpeg", 0.7));
+      return;
+    }
+    exportContext.fillStyle = "#FFFFFF";
+    exportContext.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+    exportContext.drawImage(canvas, 0, 0, exportCanvas.width, exportCanvas.height);
+    onChange(exportCanvas.toDataURL("image/jpeg", 0.65));
   }
 
   function clear() {

@@ -1,10 +1,9 @@
 "use client";
 
-import { FormEvent, useState, useTransition } from "react";
+import { FormEvent, useState } from "react";
 
 import { FileUploadField } from "@/components/admin/file-upload-field";
 import { SignaturePad } from "@/components/admin/signature-pad";
-import { submitSellerOnboardingAction } from "@/lib/actions/vendor-actions";
 import {
   ADDRESS_DOC_TYPES,
   GENDER_OPTIONS,
@@ -26,8 +25,73 @@ type SellerOnboardingFormProps = {
   invite: InvitePrefill;
 };
 
+type UploadedProof = {
+  storagePath: string;
+  documentType: string;
+  originalFilename: string;
+  mimeType: string | null;
+  fileSizeBytes: number;
+};
+
+const MAX_PROOF_BYTES = 10 * 1024 * 1024;
+
+async function uploadProofFile(input: {
+  token: string;
+  category: "identity" | "address";
+  file: File;
+  documentType: string;
+}): Promise<UploadedProof> {
+  if (input.file.size > MAX_PROOF_BYTES) {
+    throw new Error(`${input.category === "identity" ? "Identity" : "Address"} proof must be 10 MB or smaller.`);
+  }
+
+  const prepareResponse = await fetch("/api/vendor/onboard/upload-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token: input.token,
+      category: input.category,
+      filename: input.file.name,
+      contentType: input.file.type || "application/octet-stream",
+    }),
+  });
+
+  const preparePayload = (await prepareResponse.json()) as {
+    error?: string;
+    signedUrl?: string;
+    path?: string;
+    token?: string;
+  };
+
+  if (!prepareResponse.ok || !preparePayload.signedUrl || !preparePayload.path) {
+    throw new Error(preparePayload.error ?? "Unable to prepare document upload.");
+  }
+
+  const uploadResponse = await fetch(preparePayload.signedUrl, {
+    method: "PUT",
+    headers: {
+      "Content-Type": input.file.type || "application/octet-stream",
+    },
+    body: input.file,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(
+      `Failed to upload ${input.category} proof (${uploadResponse.status}). Please try again.`,
+    );
+  }
+
+  return {
+    storagePath: preparePayload.path,
+    documentType: input.documentType,
+    originalFilename: input.file.name,
+    mimeType: input.file.type || null,
+    fileSizeBytes: input.file.size,
+  };
+}
+
 export function SellerOnboardingForm({ token, invite }: SellerOnboardingFormProps) {
-  const [isPending, startTransition] = useTransition();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [successNote, setSuccessNote] = useState<string | null>(null);
@@ -36,45 +100,108 @@ export function SellerOnboardingForm({ token, invite }: SellerOnboardingFormProp
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
 
+    if (!termsAccepted) {
+      setErrorMessage("You must accept the Terms and Conditions.");
+      return;
+    }
+
+    if (!signatureDataUrl?.startsWith("data:image/")) {
+      setErrorMessage("A digital signature is required.");
+      return;
+    }
+
     const form = event.currentTarget;
-
     const formData = new FormData(form);
-    formData.set("token", token);
-    formData.set("identity_deferred", identityDeferred ? "1" : "0");
-    formData.set("address_deferred", addressDeferred ? "1" : "0");
-    formData.set("terms_accepted", termsAccepted ? "1" : "0");
-    formData.set("signature_data_url", signatureDataUrl ?? "");
-    formData.set("country_code", invite.countryCode);
 
-    if (identityDeferred) {
-      formData.delete("identity_file");
-    }
+    setIsSubmitting(true);
 
-    if (addressDeferred) {
-      formData.delete("address_file");
-    }
+    try {
+      let identityProof: UploadedProof | null = null;
+      let addressProof: UploadedProof | null = null;
 
-    startTransition(async () => {
-      try {
-        const result = await submitSellerOnboardingAction(formData);
+      if (!identityDeferred) {
+        const identityFile = formData.get("identity_file");
+        const identityDocType = String(formData.get("identity_doc_type") ?? "").trim();
 
-        if (!result.ok) {
-          setErrorMessage(result.error);
-          return;
+        if (!(identityFile instanceof File) || identityFile.size === 0) {
+          throw new Error("Identity proof is required, or choose to send later.");
+        }
+        if (!identityDocType) {
+          throw new Error("Select a valid identity document type.");
         }
 
-        setSuccessNote(result.emailWarning ?? null);
-        setSuccess(true);
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error ? error.message : "Failed to submit onboarding form.",
-        );
+        identityProof = await uploadProofFile({
+          token,
+          category: "identity",
+          file: identityFile,
+          documentType: identityDocType,
+        });
       }
-    });
+
+      if (!addressDeferred) {
+        const addressFile = formData.get("address_file");
+        const addressDocType = String(formData.get("address_doc_type") ?? "").trim();
+
+        if (!(addressFile instanceof File) || addressFile.size === 0) {
+          throw new Error("Address proof is required, or choose to send later.");
+        }
+        if (!addressDocType) {
+          throw new Error("Select a valid address document type.");
+        }
+
+        addressProof = await uploadProofFile({
+          token,
+          category: "address",
+          file: addressFile,
+          documentType: addressDocType,
+        });
+      }
+
+      const response = await fetch("/api/vendor/onboard/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          displayName: String(formData.get("display_name") ?? "").trim(),
+          gender: String(formData.get("gender") ?? "").trim(),
+          addressLine1: String(formData.get("address_line1") ?? "").trim(),
+          addressLine2: String(formData.get("address_line2") ?? "").trim(),
+          city: String(formData.get("city") ?? "").trim(),
+          stateRegion: String(formData.get("state_region") ?? "").trim(),
+          postalCode: String(formData.get("postal_code") ?? "").trim(),
+          countryCode: invite.countryCode,
+          identityDeferred,
+          addressDeferred,
+          termsAccepted,
+          signatureDataUrl,
+          identityProof,
+          addressProof,
+        }),
+      });
+
+      const result = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        emailWarning?: string;
+      };
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error ?? "Failed to submit onboarding form.");
+      }
+
+      setSuccessNote(result.emailWarning ?? null);
+      setSuccess(true);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to submit onboarding form.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   if (success) {
@@ -335,10 +462,10 @@ export function SellerOnboardingForm({ token, invite }: SellerOnboardingFormProp
 
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isSubmitting}
         className="w-full rounded-xl bg-[#3B0F14] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#5C1520] disabled:opacity-60 sm:w-auto"
       >
-        {isPending ? "Submitting…" : "Submit onboarding"}
+        {isSubmitting ? "Submitting…" : "Submit onboarding"}
       </button>
     </form>
   );

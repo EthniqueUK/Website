@@ -32,12 +32,34 @@ export function InviteSellerForm({ markets, defaultMarketId }: InviteSellerFormP
 
     startTransition(async () => {
       try {
-        await inviteSellerAction(formData);
-        setSuccessMessage("Invite sent. The seller will receive an onboarding email.");
+        const result = await inviteSellerAction(formData);
+
+        if (!result.ok) {
+          setErrorMessage(result.error);
+          return;
+        }
+
+        if (result.emailWarning) {
+          setErrorMessage(result.emailWarning);
+          setSuccessMessage(
+            "Invite was created in Vendor Requests, but the email was not delivered.",
+          );
+        } else {
+          setSuccessMessage("Invite sent. The seller will receive an onboarding email.");
+        }
+
         (event.target as HTMLFormElement).reset();
         router.refresh();
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Failed to send invite.");
+        const message =
+          error instanceof Error ? error.message : "Failed to send invite.";
+        // Production often sanitizes thrown Server Action errors into this generic text.
+        setErrorMessage(
+          message.includes("omitted in production")
+            || message.includes("digest")
+            ? "Invite failed in production. Check RESEND_API_KEY, RESEND_FROM_EMAIL, SUPABASE_SECRET_KEY, and that migration 20260708_vendor_onboarding_seller_fields.sql is applied."
+            : message,
+        );
       }
     });
   }

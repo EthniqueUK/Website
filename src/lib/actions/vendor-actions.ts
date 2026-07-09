@@ -39,106 +39,140 @@ function parseRequired(value: FormDataEntryValue | null, label: string) {
   return text;
 }
 
-export async function inviteSellerAction(formData: FormData) {
-  const staff = await assertSuperAdmin();
+type InviteSellerResult =
+  | { ok: true; inviteId: string; emailWarning?: string }
+  | { ok: false; error: string };
 
-  const displayName = parseRequired(formData.get("display_name"), "Name");
-  const genderRaw = parseRequired(formData.get("gender"), "Gender");
-  const email = parseRequired(formData.get("email"), "Email").toLowerCase();
-  const phone = parseRequired(formData.get("phone"), "Phone number");
-  const marketId = parseRequired(formData.get("market_id"), "Market");
+export async function inviteSellerAction(formData: FormData): Promise<InviteSellerResult> {
+  try {
+    const staff = await assertSuperAdmin();
 
-  if (!isGender(genderRaw)) {
-    throw new Error("Invalid gender selection.");
+    const displayName = parseRequired(formData.get("display_name"), "Name");
+    const genderRaw = parseRequired(formData.get("gender"), "Gender");
+    const email = parseRequired(formData.get("email"), "Email").toLowerCase();
+    const phone = parseRequired(formData.get("phone"), "Phone number");
+    const marketId = parseRequired(formData.get("market_id"), "Market");
+
+    if (!isGender(genderRaw)) {
+      return { ok: false, error: "Invalid gender selection." };
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return { ok: false, error: "Enter a valid email address." };
+    }
+
+    const admin = createAdminClient();
+
+    const { data: market, error: marketError } = await admin
+      .from("markets")
+      .select("id, name, code")
+      .eq("id", marketId)
+      .maybeSingle();
+
+    if (marketError || !market) {
+      return { ok: false, error: "Selected market was not found." };
+    }
+
+    const { data: existingInvite } = await admin
+      .from("vendor_onboarding_invites")
+      .select("id")
+      .eq("status", "pending")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (existingInvite) {
+      return { ok: false, error: "A pending invite already exists for this email." };
+    }
+
+    const { data: existingStaff } = await admin
+      .from("profiles")
+      .select("id, role")
+      .neq("role", "customer")
+      .ilike("email", email)
+      .maybeSingle();
+
+    if (existingStaff) {
+      return { ok: false, error: "A staff account already exists with this email." };
+    }
+
+    const token = createInviteToken();
+    const tokenHash = hashInviteToken(token);
+    const expiresAt = new Date();
+    expiresAt.setUTCDate(expiresAt.getUTCDate() + ONBOARDING_INVITE_DAYS);
+
+    const { data: invite, error: inviteError } = await admin
+      .from("vendor_onboarding_invites")
+      .insert({
+        email,
+        market_id: marketId,
+        token_hash: tokenHash,
+        invited_by: staff.userId,
+        expires_at: expiresAt.toISOString(),
+        status: "pending",
+        display_name: displayName,
+        gender: genderRaw,
+        phone,
+      })
+      .select("id")
+      .single();
+
+    if (inviteError || !invite) {
+      console.error("Failed to create seller invite:", inviteError);
+      return {
+        ok: false,
+        error:
+          inviteError?.message
+          ?? "Failed to create seller invite. Check that seller-field migrations are applied in production.",
+      };
+    }
+
+    let emailWarning: string | undefined;
+
+    try {
+      await sendResendEmail({
+        type: "vendor_onboarding_invite",
+        to: email,
+        subject: "Complete your Ethnique seller onboarding",
+        html: vendorInviteEmailHtml({
+          name: displayName,
+          marketName: market.name,
+          token,
+          expiresAt,
+        }),
+        inviteId: invite.id,
+      });
+    } catch (emailError) {
+      console.error("Seller invite email failed:", emailError);
+      emailWarning =
+        emailError instanceof Error
+          ? `Invite was created, but the email could not be sent: ${emailError.message}`
+          : "Invite was created, but the email could not be sent. Check RESEND_API_KEY and RESEND_FROM_EMAIL in production.";
+    }
+
+    await logAdminAction({
+      actor: staff,
+      action: "vendor.invite",
+      entityType: "vendor_invite",
+      entityId: invite.id,
+      summary: `Invited seller ${email} for ${market.code.toUpperCase()} market`,
+      metadata: {
+        email,
+        marketId,
+        displayName,
+        emailSent: !emailWarning,
+      },
+    });
+
+    revalidatePath("/admin/users");
+    revalidatePath("/admin/vendors/approvals");
+    return { ok: true, inviteId: invite.id, emailWarning };
+  } catch (error) {
+    console.error("inviteSellerAction failed:", error);
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to send invite.",
+    };
   }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    throw new Error("Enter a valid email address.");
-  }
-
-  const admin = createAdminClient();
-
-  const { data: market, error: marketError } = await admin
-    .from("markets")
-    .select("id, name, code")
-    .eq("id", marketId)
-    .maybeSingle();
-
-  if (marketError || !market) {
-    throw new Error("Selected market was not found.");
-  }
-
-  const { data: existingInvite } = await admin
-    .from("vendor_onboarding_invites")
-    .select("id")
-    .eq("status", "pending")
-    .ilike("email", email)
-    .maybeSingle();
-
-  if (existingInvite) {
-    throw new Error("A pending invite already exists for this email.");
-  }
-
-  const { data: existingStaff } = await admin
-    .from("profiles")
-    .select("id, role")
-    .neq("role", "customer")
-    .ilike("email", email)
-    .maybeSingle();
-
-  if (existingStaff) {
-    throw new Error("A staff account already exists with this email.");
-  }
-
-  const token = createInviteToken();
-  const tokenHash = hashInviteToken(token);
-  const expiresAt = new Date();
-  expiresAt.setUTCDate(expiresAt.getUTCDate() + ONBOARDING_INVITE_DAYS);
-
-  const { data: invite, error: inviteError } = await admin
-    .from("vendor_onboarding_invites")
-    .insert({
-      email,
-      market_id: marketId,
-      token_hash: tokenHash,
-      invited_by: staff.userId,
-      expires_at: expiresAt.toISOString(),
-      status: "pending",
-      display_name: displayName,
-      gender: genderRaw,
-      phone,
-    })
-    .select("id")
-    .single();
-
-  if (inviteError || !invite) {
-    throw new Error(inviteError?.message ?? "Failed to create seller invite.");
-  }
-
-  await sendResendEmail({
-    type: "vendor_onboarding_invite",
-    to: email,
-    subject: "Complete your Ethnique seller onboarding",
-    html: vendorInviteEmailHtml({
-      name: displayName,
-      marketName: market.name,
-      token,
-      expiresAt,
-    }),
-    inviteId: invite.id,
-  });
-
-  await logAdminAction({
-    actor: staff,
-    action: "vendor.invite",
-    entityType: "vendor_invite",
-    entityId: invite.id,
-    summary: `Invited seller ${email} for ${market.code.toUpperCase()} market`,
-    metadata: { email, marketId, displayName },
-  });
-
-  revalidatePath("/admin/users");
-  return { ok: true as const, inviteId: invite.id };
 }
 
 export type VendorInviteView = {
@@ -216,228 +250,6 @@ export async function getInviteByToken(
         : null,
     },
   };
-}
-
-type SubmitOnboardingResult =
-  | { ok: true; submissionId: string; emailWarning?: string }
-  | { ok: false; error: string };
-
-const MAX_PROOF_BYTES = 10 * 1024 * 1024;
-
-function formText(value: FormDataEntryValue | null) {
-  return typeof value === "string" ? value.trim() : "";
-}
-
-function formBool(value: FormDataEntryValue | null) {
-  return value === "true" || value === "1";
-}
-
-function formFile(value: FormDataEntryValue | null): File | null {
-  if (value instanceof File && value.size > 0) {
-    return value;
-  }
-  return null;
-}
-
-function validateProofFile(file: File, label: string) {
-  if (file.size > MAX_PROOF_BYTES) {
-    throw new Error(`${label} must be 10 MB or smaller.`);
-  }
-}
-
-export async function submitSellerOnboardingAction(
-  formData: FormData,
-): Promise<SubmitOnboardingResult> {
-  try {
-    const token = formText(formData.get("token"));
-    if (!token) {
-      return { ok: false, error: "Invalid onboarding link." };
-    }
-
-    const inviteResult = await getInviteByToken(token);
-    if ("error" in inviteResult) {
-      return { ok: false, error: inviteResult.error };
-    }
-
-    const invite = inviteResult.invite;
-    const market = invite.markets;
-
-    if (!market) {
-      return { ok: false, error: "Invite market is missing." };
-    }
-
-    const displayName = formText(formData.get("display_name"));
-    const gender = formText(formData.get("gender"));
-    const addressLine1 = formText(formData.get("address_line1"));
-    const addressLine2 = formText(formData.get("address_line2"));
-    const city = formText(formData.get("city"));
-    const stateRegion = formText(formData.get("state_region"));
-    const postalCode = formText(formData.get("postal_code"));
-    const countryCode = formText(formData.get("country_code")) || invite.markets?.country_code || "GB";
-    const identityDeferred = formBool(formData.get("identity_deferred"));
-    const addressDeferred = formBool(formData.get("address_deferred"));
-    const identityDocType = formText(formData.get("identity_doc_type")) || null;
-    const addressDocType = formText(formData.get("address_doc_type")) || null;
-    const identityFile = identityDeferred ? null : formFile(formData.get("identity_file"));
-    const addressFile = addressDeferred ? null : formFile(formData.get("address_file"));
-    const termsAccepted = formBool(formData.get("terms_accepted"));
-    const signatureDataUrl = formText(formData.get("signature_data_url"));
-
-    if (!displayName) return { ok: false, error: "Name is required." };
-    if (!isGender(gender)) return { ok: false, error: "Invalid gender selection." };
-    if (!addressLine1) return { ok: false, error: "Address is required." };
-    if (!city) return { ok: false, error: "City is required." };
-    if (!postalCode) return { ok: false, error: "Postal code is required." };
-    if (!countryCode) return { ok: false, error: "Country is required." };
-    if (!termsAccepted) {
-      return { ok: false, error: "You must accept the Terms and Conditions." };
-    }
-    if (!signatureDataUrl.startsWith("data:image/")) {
-      return { ok: false, error: "A digital signature is required." };
-    }
-
-    if (!identityDeferred) {
-      if (!identityFile) {
-        return { ok: false, error: "Identity proof is required, or choose to send later." };
-      }
-      validateProofFile(identityFile, "Identity proof");
-      if (!IDENTITY_DOC_TYPES.some((doc) => doc.value === identityDocType)) {
-        return { ok: false, error: "Select a valid identity document type." };
-      }
-    }
-
-    if (!addressDeferred) {
-      if (!addressFile) {
-        return { ok: false, error: "Address proof is required, or choose to send later." };
-      }
-      validateProofFile(addressFile, "Address proof");
-      if (!ADDRESS_DOC_TYPES.some((doc) => doc.value === addressDocType)) {
-        return { ok: false, error: "Select a valid address document type." };
-      }
-    }
-
-    const admin = createAdminClient();
-
-    const { data: submission, error: submissionError } = await admin
-      .from("vendor_onboarding_submissions")
-      .insert({
-        invite_id: invite.id,
-        legal_name: displayName,
-        display_name: displayName,
-        phone: invite.phone ?? "",
-        gender,
-        address_line1: addressLine1,
-        address_line2: addressLine2 || null,
-        city,
-        state_region: stateRegion || null,
-        postal_code: postalCode,
-        country_code: countryCode.toUpperCase(),
-        status: "submitted",
-        terms_accepted_at: new Date().toISOString(),
-        signature_data_url: signatureDataUrl,
-        identity_proof_deferred: identityDeferred,
-        address_proof_deferred: addressDeferred,
-      })
-      .select("id")
-      .single();
-
-    if (submissionError || !submission) {
-      return {
-        ok: false,
-        error: submissionError?.message ?? "Failed to save onboarding submission.",
-      };
-    }
-
-    async function uploadProof(file: File, category: "identity" | "address", docType: string) {
-      const extension = file.name.split(".").pop()?.toLowerCase() || "bin";
-      const path = `${submission!.id}/${category}-${Date.now()}.${extension}`;
-
-      const bytes = Buffer.from(await file.arrayBuffer());
-      const { error: uploadError } = await admin.storage
-        .from("vendor-identity-documents")
-        .upload(path, bytes, {
-          contentType: file.type || "application/octet-stream",
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw new Error(`Failed to upload ${category} proof: ${uploadError.message}`);
-      }
-
-      const { error: docError } = await admin.from("vendor_identity_documents").insert({
-        submission_id: submission!.id,
-        document_type: docType,
-        proof_category: category,
-        storage_path: path,
-        original_filename: file.name,
-        mime_type: file.type || null,
-        file_size_bytes: file.size,
-      });
-
-      if (docError) {
-        throw new Error(docError.message);
-      }
-    }
-
-    if (!identityDeferred && identityFile && identityDocType) {
-      await uploadProof(identityFile, "identity", identityDocType);
-    }
-
-    if (!addressDeferred && addressFile && addressDocType) {
-      await uploadProof(addressFile, "address", addressDocType);
-    }
-
-    await admin
-      .from("vendor_onboarding_invites")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-      })
-      .eq("id", invite.id);
-
-    let emailWarning: string | undefined;
-
-    try {
-      const notifyEmail = getResendEnv().ADMIN_NOTIFICATION_EMAIL;
-
-      await Promise.all([
-        sendResendEmail({
-          type: "vendor_onboarding_submitted_vendor",
-          to: invite.email,
-          subject: "We received your Ethnique seller onboarding",
-          html: vendorSubmittedSellerEmailHtml({ name: displayName }),
-          inviteId: invite.id,
-          submissionId: submission.id,
-        }),
-        sendResendEmail({
-          type: "vendor_onboarding_submitted_admin",
-          to: notifyEmail,
-          subject: `Seller onboarding submitted: ${displayName}`,
-          html: vendorSubmittedAdminEmailHtml({
-            name: displayName,
-            email: invite.email,
-            marketName: market.name,
-          }),
-          inviteId: invite.id,
-          submissionId: submission.id,
-        }),
-      ]);
-    } catch (emailError) {
-      console.error("Onboarding confirmation emails failed:", emailError);
-      emailWarning =
-        emailError instanceof Error
-          ? `Your form was saved, but confirmation emails could not be sent: ${emailError.message}`
-          : "Your form was saved, but confirmation emails could not be sent.";
-    }
-
-    return { ok: true, submissionId: submission.id, emailWarning };
-  } catch (error) {
-    console.error("Seller onboarding submission failed:", error);
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Failed to submit onboarding form.",
-    };
-  }
 }
 
 export async function approveSellerSubmissionAction(submissionId: string) {

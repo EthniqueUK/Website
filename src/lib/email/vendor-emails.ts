@@ -58,7 +58,17 @@ async function logEmailEvent(input: {
 }
 
 export async function sendResendEmail(input: SendEmailInput) {
-  const env = getResendEnv();
+  let env;
+  try {
+    env = getResendEnv();
+  } catch (error) {
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Email is not configured. Set RESEND_API_KEY and RESEND_FROM_EMAIL in production.",
+    );
+  }
+
   const resend = new Resend(env.RESEND_API_KEY);
   const recipients = Array.isArray(input.to) ? input.to : [input.to];
 
@@ -83,7 +93,10 @@ export async function sendResendEmail(input: SendEmailInput) {
   }
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      error.message
+      || "Resend rejected the email. Verify RESEND_FROM_EMAIL uses a domain verified in Resend.",
+    );
   }
 
   return data;
