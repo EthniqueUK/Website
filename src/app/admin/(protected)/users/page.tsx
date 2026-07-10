@@ -31,6 +31,10 @@ type InviteRow = {
   expires_at: string;
   created_at: string;
   markets: { name: string; code: string } | { name: string; code: string }[] | null;
+  submission:
+    | { status: string }
+    | { status: string }[]
+    | null;
 };
 
 function marketLabel(
@@ -40,13 +44,12 @@ function marketLabel(
   return market ? `${market.name} (${market.code.toUpperCase()})` : "—";
 }
 
-function statusBadge(status: string) {
+function staffStatusBadge(status: string) {
   const styles: Record<string, string> = {
     active: "bg-emerald-50 text-emerald-800 border-emerald-200",
     invited: "bg-amber-50 text-amber-800 border-amber-200",
     pending: "bg-amber-50 text-amber-800 border-amber-200",
     pending_approval: "bg-sky-50 text-sky-800 border-sky-200",
-    completed: "bg-sky-50 text-sky-800 border-sky-200",
     rejected: "bg-red-50 text-red-700 border-red-200",
     expired: "bg-stone-100 text-stone-600 border-stone-200",
     revoked: "bg-stone-100 text-stone-600 border-stone-200",
@@ -61,6 +64,38 @@ function statusBadge(status: string) {
       }`}
     >
       {status.replaceAll("_", " ")}
+    </span>
+  );
+}
+
+/** Vendor invite lifecycle: Pending | Expired | Approved | Rejected. */
+function vendorInviteStatusBadge(invite: InviteRow) {
+  const submission = Array.isArray(invite.submission)
+    ? invite.submission[0]
+    : invite.submission;
+
+  let label: "Pending" | "Expired" | "Approved" | "Rejected" = "Pending";
+  let tone = "bg-amber-50 text-amber-800 border-amber-200";
+
+  if (submission?.status === "approved") {
+    label = "Approved";
+    tone = "bg-emerald-50 text-emerald-800 border-emerald-200";
+  } else if (submission?.status === "rejected") {
+    label = "Rejected";
+    tone = "bg-red-50 text-red-700 border-red-200";
+  } else if (
+    invite.status === "expired"
+    || (invite.status === "pending" && new Date(invite.expires_at).getTime() < Date.now())
+  ) {
+    label = "Expired";
+    tone = "bg-stone-100 text-stone-600 border-stone-200";
+  }
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${tone}`}
+    >
+      {label}
     </span>
   );
 }
@@ -97,7 +132,9 @@ export default async function AdminUsersPage() {
     staff.role === "super_admin"
       ? admin
           .from("vendor_onboarding_invites")
-          .select("id, email, display_name, status, expires_at, created_at, markets:market_id(name, code)")
+          .select(
+            "id, email, display_name, status, expires_at, created_at, markets:market_id(name, code), submission:vendor_onboarding_submissions(status)",
+          )
           .order("created_at", { ascending: false })
           .limit(25)
       : Promise.resolve({ data: [] as InviteRow[] }),
@@ -186,7 +223,7 @@ export default async function AdminUsersPage() {
                   <td className="py-3 pr-3 text-[#1F1F1F]">{user.email}</td>
                   <td className="py-3 pr-3 text-[#1F1F1F]">{roleLabel(user.role)}</td>
                   <td className="py-3 pr-3 text-[#1F1F1F]">{marketLabel(user.markets)}</td>
-                  <td className="py-3 pr-3">{statusBadge(user.status)}</td>
+                  <td className="py-3 pr-3">{staffStatusBadge(user.status)}</td>
                   <td className="py-3 pr-3 min-w-[220px]">
                     <StaffUserActions
                       userId={user.id}
@@ -216,7 +253,7 @@ export default async function AdminUsersPage() {
                     allStaff.find((user) => user.id === staff.userId)?.markets ?? null,
                   )}
                 </td>
-                <td className="py-3 pr-3">{statusBadge(staff.status)}</td>
+                <td className="py-3 pr-3">{staffStatusBadge(staff.status)}</td>
                 <td className="py-3 pr-3 min-w-[220px]">
                   <StaffUserActions
                     userId={staff.userId}
@@ -264,7 +301,7 @@ export default async function AdminUsersPage() {
                   <td className="py-3 pr-3 text-[#3B0F14]">{invite.display_name ?? "—"}</td>
                   <td className="py-3 pr-3 text-[#1F1F1F]">{invite.email}</td>
                   <td className="py-3 pr-3 text-[#1F1F1F]">{marketLabel(invite.markets)}</td>
-                  <td className="py-3 pr-3">{statusBadge(invite.status)}</td>
+                  <td className="py-3 pr-3">{vendorInviteStatusBadge(invite)}</td>
                   <td className="py-3 pr-3 text-[#A79C89]">
                     {new Date(invite.expires_at).toLocaleDateString()}
                   </td>

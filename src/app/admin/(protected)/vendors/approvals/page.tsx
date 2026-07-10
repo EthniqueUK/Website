@@ -79,9 +79,9 @@ function requestStatusBadge(label: string, tone: "amber" | "sky" | "stone") {
 
 function inviteStatusLabel(invite: PendingInviteRow) {
   if (new Date(invite.expires_at).getTime() < Date.now()) {
-    return { label: "Invite expired", tone: "stone" as const };
+    return { label: "Expired", tone: "stone" as const };
   }
-  return { label: "Invite sent", tone: "amber" as const };
+  return { label: "Pending", tone: "amber" as const };
 }
 
 export default async function VendorApprovalsPage() {
@@ -231,7 +231,7 @@ export default async function VendorApprovalsPage() {
                         <h3 className="font-[family-name:var(--font-playfair)] text-xl text-[#3B0F14]">
                           {vendorName}
                         </h3>
-                        {requestStatusBadge("Awaiting approval", "sky")}
+                        {requestStatusBadge("Pending", "sky")}
                       </div>
                       <p className="mt-1 text-sm text-[#A79C89]">
                         {invite.email} · {marketName(invite.markets)} · {genderLabel(row.gender)}
