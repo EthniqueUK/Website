@@ -16,7 +16,8 @@ export type AuditAction =
   | "product.create"
   | "product.update"
   | "product.delete"
-  | "product.activate";
+  | "product.activate"
+  | "product.archive";
 
 type LogAdminActionInput = {
   actor: Pick<StaffAuthState, "userId" | "email" | "role" | "marketId">;

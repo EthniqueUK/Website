@@ -33,7 +33,10 @@ export default function Footer() {
               {[
                 { label: "Home", href: "/" },
                 { label: "About", href: "/about" },
-                { label: "Collections", href: "/collections" },
+                { label: "Shop", href: "/shop" },
+                { label: "Women", href: "/shop/women" },
+                { label: "Men", href: "/shop/men" },
+                { label: "Kids", href: "/shop/kids" },
                 { label: "Sell with Us", href: "/sell" },
                 { label: "Contact", href: "/contact" },
               ].map(({ label, href }) => (

@@ -137,7 +137,7 @@ const ADMIN_GROUPS: AdminGroup[] = [
       {
         href: "/admin/categories",
         label: "Categories",
-        description: "Organise the catalogue",
+        description: "Garment types and marketing tags",
         icon: "tag",
         roles: ["super_admin", "vendor"],
       },

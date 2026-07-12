@@ -183,7 +183,7 @@ export default function AboutPage() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            href="/collections"
+            href="/shop"
             className="bg-[#3B0F14] text-[#F7F3EB] font-sans text-xs tracking-widest uppercase px-8 py-4 hover:bg-[#C8A86A] hover:text-[#3B0F14] transition-colors duration-300"
           >
             Shop the Collection

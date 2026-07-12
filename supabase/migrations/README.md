@@ -35,6 +35,7 @@ Run each migration file **in order**:
 3. `20260703_admin_rls_policies.sql`
 4. `20260708_vendor_onboarding_seller_fields.sql` (if not already applied)
 5. `20260709_vendor_optional_mfa.sql` — vendor 2FA optional; super admin only mandatory
+6. `20260712_catalog_taxonomy.sql` — product department, tags, product_tags, seed categories/tags
 
 ## TableSchemas parity
 
@@ -45,6 +46,7 @@ Canonical schema definitions live in `supabase/TableSchemas/`:
 | `00`–`12` | Ecommerce |
 | `13`–`19` | Admin portal tables and functions |
 | `20` | RLS policies |
+| `21`–`22` | Seller fields + catalog taxonomy (department, tags) |
 
 Migrations are generated from TableSchemas for deployment. When changing schema, update TableSchemas first, then regenerate or hand-sync migrations.
 

@@ -8,7 +8,9 @@ import { useState } from "react";
 const links = [
   { href: "/", label: "Home" },
   { href: "/about", label: "About" },
-  { href: "/collections", label: "Collections" },
+  { href: "/shop/women", label: "Women" },
+  { href: "/shop/men", label: "Men" },
+  { href: "/shop/kids", label: "Kids" },
   { href: "/contact", label: "Contact" },
 ];
 
@@ -39,7 +41,7 @@ export default function Navbar() {
                 key={href}
                 href={href}
                 className={`font-sans text-sm tracking-widest uppercase transition-colors duration-200 ${
-                  pathname === href
+                  pathname === href || (href.startsWith("/shop/") && pathname.startsWith(href))
                     ? "text-[#C8A86A]"
                     : "text-[#3B0F14] hover:text-[#C8A86A]"
                 }`}
@@ -52,7 +54,7 @@ export default function Navbar() {
           {/* CTA */}
           <div className="hidden md:flex items-center gap-4">
             <Link
-              href="/collections"
+              href="/shop"
               className="bg-[#3B0F14] text-[#F7F3EB] font-sans text-xs tracking-widest uppercase px-5 py-2.5 hover:bg-[#C8A86A] transition-colors duration-300"
             >
               Shop Now
@@ -81,14 +83,16 @@ export default function Navbar() {
               href={href}
               onClick={() => setMenuOpen(false)}
               className={`font-sans text-sm tracking-widest uppercase ${
-                pathname === href ? "text-[#C8A86A]" : "text-[#3B0F14]"
+                pathname === href || (href.startsWith("/shop/") && pathname.startsWith(href))
+                  ? "text-[#C8A86A]"
+                  : "text-[#3B0F14]"
               }`}
             >
               {label}
             </Link>
           ))}
           <Link
-            href="/collections"
+            href="/shop"
             onClick={() => setMenuOpen(false)}
             className="bg-[#3B0F14] text-[#F7F3EB] font-sans text-xs tracking-widest uppercase px-5 py-2.5 text-center hover:bg-[#C8A86A] transition-colors duration-300"
           >

@@ -153,6 +153,74 @@ to authenticated
 using (public.is_vendor_or_above())
 with check (public.is_vendor_or_above());
 
+-- ---- tags ----
+
+alter table public.tags enable row level security;
+
+create policy "Public can read active tags"
+on public.tags
+for select
+to anon, authenticated
+using (is_active = true);
+
+create policy "Vendor or above can manage tags"
+on public.tags
+for all
+to authenticated
+using (public.is_vendor_or_above())
+with check (public.is_vendor_or_above());
+
+-- ---- product_tags ----
+
+alter table public.product_tags enable row level security;
+
+create policy "Public can read product tags for active products"
+on public.product_tags
+for select
+to anon, authenticated
+using (
+  exists (
+    select 1
+    from public.products p
+    where p.id = product_tags.product_id
+      and p.is_active = true
+  )
+);
+
+create policy "Staff can read product tags"
+on public.product_tags
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.products p
+    where p.id = product_tags.product_id
+      and public.staff_can_access_product(p.market_id, p.vendor_id)
+  )
+);
+
+create policy "Staff can manage product tags"
+on public.product_tags
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.products p
+    where p.id = product_tags.product_id
+      and public.staff_can_access_product(p.market_id, p.vendor_id)
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.products p
+    where p.id = product_tags.product_id
+      and public.staff_can_access_product(p.market_id, p.vendor_id)
+  )
+);
+
 -- ---- products ----
 
 alter table public.products enable row level security;

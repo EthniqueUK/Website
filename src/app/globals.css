@@ -51,6 +51,20 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Interactive affordance — hand cursor on links and clickable controls */
+a[href],
+button:not(:disabled),
+summary,
+[role="button"]:not([aria-disabled="true"]),
+[role="link"] {
+  cursor: pointer;
+}
+
+button:disabled,
+a[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* ─── Dark section background ───────────────────────────────────────────────
    Single source of truth for all dark-toned sections across every page.
    Update --rose-burgundy / --section-mid / --burgundy in :root above to

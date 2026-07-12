@@ -2,12 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 
 const featuredCategories = [
-  { name: "Sarees", description: "Handwoven elegance", tag: "New Arrivals" },
-  { name: "Lehengas", description: "Bridal & festive", tag: "Bestseller" },
-  { name: "Kurta Sets", description: "Everyday heritage", tag: "New Arrivals" },
-  { name: "Anarkalis", description: "Timeless silhouettes", tag: "Trending" },
-  { name: "Dupattas", description: "Artisan embroidery", tag: "Curated" },
-  { name: "Blouses", description: "Bespoke craftsmanship", tag: "Custom" },
+  { name: "Sarees", description: "Handwoven elegance", tag: "New Arrivals", href: "/shop/women/saree" },
+  { name: "Lehengas", description: "Bridal & festive", tag: "Bestseller", href: "/shop/women/lehenga" },
+  { name: "Kurta Sets", description: "Everyday heritage", tag: "New Arrivals", href: "/shop/women/kurta-set" },
+  { name: "Anarkalis", description: "Timeless silhouettes", tag: "Trending", href: "/shop/women/anarkali" },
+  { name: "Dupattas", description: "Artisan embroidery", tag: "Curated", href: "/shop/women/dupatta" },
+  { name: "Accessories", description: "Bespoke craftsmanship", tag: "Custom", href: "/shop/women/accessories" },
 ];
 
 const newArrivals = [
@@ -88,7 +88,7 @@ export default function Home() {
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
-                href="/collections"
+                href="/shop"
                 className="bg-[#C8A86A] text-[#3B0F14] font-sans text-xs tracking-widest uppercase px-7 py-3.5 hover:bg-[#F7F3EB] transition-colors duration-300"
               >
                 Explore Collection
@@ -179,7 +179,7 @@ export default function Home() {
               ))}
             </ul>
             <Link
-              href="/collections"
+              href="/shop/new-arrivals"
               className="relative mt-auto self-start bg-[#2A5548] text-[#F7F3EB] font-sans text-xs tracking-widest uppercase px-7 py-3.5 hover:bg-[#1F4037] transition-colors duration-300"
             >
               Shop New Arrivals
@@ -218,7 +218,7 @@ export default function Home() {
               ))}
             </ul>
             <Link
-              href="/collections"
+              href="/shop"
               className="relative mt-auto self-start bg-[#C8A86A] text-[#2C2418] font-sans text-xs tracking-widest uppercase px-7 py-3.5 hover:bg-[#F7F3EB] transition-colors duration-300"
             >
               Explore Pre-Loved
@@ -271,7 +271,7 @@ export default function Home() {
           {featuredCategories.map((cat) => (
             <Link
               key={cat.name}
-              href="/collections"
+              href={cat.href}
               className="group relative overflow-hidden"
             >
               {/* Placeholder card */}
@@ -312,7 +312,7 @@ export default function Home() {
               </h2>
             </div>
             <Link
-              href="/collections"
+              href="/shop/new-arrivals"
               className="font-sans text-xs tracking-widest uppercase text-[#3B0F14] border-b border-[#3B0F14] pb-0.5 hover:text-[#C8A86A] hover:border-[#C8A86A] transition-colors"
             >
               View All
@@ -345,7 +345,7 @@ export default function Home() {
                   {/* Hover overlay */}
                   <div className="absolute inset-0 bg-[#7A2030]/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <Link
-                      href="/collections"
+                      href="/shop/new-arrivals"
                       className="bg-[#F7F3EB] text-[#3B0F14] font-sans text-xs tracking-widest uppercase px-5 py-2.5"
                     >
                       Quick View
@@ -421,7 +421,7 @@ export default function Home() {
             for every occasion.
           </p>
           <Link
-            href="/collections"
+            href="/shop/festive"
             className="inline-block bg-[#C8A86A] text-[#3B0F14] font-sans text-xs tracking-widest uppercase px-10 py-4 hover:bg-[#F7F3EB] transition-colors duration-300"
           >
             Explore Festive Edit
